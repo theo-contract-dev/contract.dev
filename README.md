@@ -136,4 +136,4 @@ Use a JSON-RPC signer instead, such as `provider.getSigner(address)` in ethers.
 
 ## Docs
 
-Full reference is available at [docs.contract.dev/sdk](https://docs.contract.dev/sdk).
+Full reference is available in our [docs](https://docs.contract.dev/sdk-and-cli).
