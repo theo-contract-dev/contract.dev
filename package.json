@@ -1,0 +1,38 @@
+{
+  "name": "contract.dev",
+  "version": "0.3.0",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "contract.dev": "dist/cli/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theo-contract-dev/contract.dev.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "prepublishOnly": "tsc",
+    "test": "jest",
+    "test:foundry": "jest test/integration/upload-contracts.test.ts -t Foundry",
+    "test:hh-v2": "jest test/integration/upload-contracts.test.ts -t \"Hardhat v2\"",
+    "test:hh-v3": "jest test/integration/upload-contracts.test.ts -t \"Hardhat v3\"",
+    "test:wallet": "jest test/integration/generate-wallet.test.ts"
+  },
+  "dependencies": {
+    "ethers": "^6.13.5"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  },
+  "files": [
+    "dist"
+  ]
+}
