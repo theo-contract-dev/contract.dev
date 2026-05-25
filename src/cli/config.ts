@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import { dirname, join, parse as parsePath, resolve } from 'node:path';
+import { relPath } from './format';
 
 export interface FileConfig {
-  rpcKey?: string;
   rpcUrl?: string;
   // Override source dir. Auto-detected from foundry.toml / hardhat config if absent.
   contracts?: string;
@@ -44,27 +44,29 @@ export function loadConfig(cwd: string = process.cwd()): LoadedConfig {
     );
   }
 
+  const displayPath = relPath(configPath);
+
   // Clear the require cache so an edited config is picked up on reload.
   delete require.cache[require.resolve(configPath)];
   let mod: any;
   try {
     mod = require(configPath);
   } catch (e) {
-    throw new Error(`Failed to load ${configPath}: ${e instanceof Error ? e.message : e}`);
+    throw new Error(`Failed to load ${displayPath}: ${e instanceof Error ? e.message : e}`);
   }
   const raw = mod?.default ?? mod;
 
   if (!raw || typeof raw !== 'object') {
-    throw new Error(`${configPath} must export an object (e.g. module.exports = { rpcUrl: "..." })`);
+    throw new Error(`${displayPath} must export an object (e.g. module.exports = { rpcUrl: "..." })`);
   }
 
   const config = raw as FileConfig;
-  if (!config.rpcKey && !config.rpcUrl) {
-    throw new Error(`${configPath} is missing "rpcUrl"`);
+  if (!config.rpcUrl) {
+    throw new Error(`${displayPath} is missing "rpcUrl"`);
   }
-  if (isPlaceholder(config.rpcUrl) || isPlaceholder(config.rpcKey)) {
+  if (isPlaceholder(config.rpcUrl)) {
     throw new Error(
-      `Your ${configPath} still has a placeholder. ` +
+      `Your ${displayPath} still has a placeholder. ` +
         'Edit it and set "rpcUrl" to your Stagenet URL ' +
         '(copy it from your project dashboard at https://contract.dev).',
     );
@@ -82,10 +84,7 @@ function isPlaceholder(value: string | undefined): boolean {
   return !!value && value.startsWith('<') && value.endsWith('>');
 }
 
-// Compose the full RPC URL from a config. `rpcUrl` takes precedence; otherwise
-// build it from `rpcKey` against the contract.dev base.
 export function resolveRpcUrl(config: FileConfig): string {
   if (config.rpcUrl) return config.rpcUrl;
-  if (config.rpcKey) return `https://rpc.contract.dev/${config.rpcKey}`;
-  throw new Error('Config is missing "rpcUrl" or "rpcKey"');
+  throw new Error('Config is missing "rpcUrl"');
 }

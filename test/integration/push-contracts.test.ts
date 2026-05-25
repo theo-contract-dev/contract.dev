@@ -13,7 +13,7 @@ import {
     ensureForgeLibs,
 } from '../../../client/test/frameworks/utils';
 
-import { uploadContractsCommand } from '../../src/cli/commands/upload-contracts';
+import { pushContractsCommand } from '../../src/cli/commands/push-contracts';
 
 jest.setTimeout(600000);
 
@@ -32,7 +32,7 @@ const NODE_22_AVAILABLE = fs.existsSync(NODE_22_DIR) &&
 const hhV3Describe = NODE_22_AVAILABLE ? describe : describe.skip;
 if (!NODE_22_AVAILABLE) {
     console.warn(
-        `[upload-contracts] skipping Hardhat v3 case: Node ${HH_V3_NODE_VERSION} not found under ~/.nvm/versions/node. Run \`nvm install ${HH_V3_NODE_VERSION}\` to enable.`,
+        `[push-contracts] skipping Hardhat v3 case: Node ${HH_V3_NODE_VERSION} not found under ~/.nvm/versions/node. Run \`nvm install ${HH_V3_NODE_VERSION}\` to enable.`,
     );
 }
 
@@ -59,7 +59,7 @@ function cleanHardhatArtifacts(projectDir: string) {
     }
 }
 
-describe('contract.dev upload-contracts', () => {
+describe('contract.dev push-contracts', () => {
     describe('Foundry', () => {
         const projectDir = path.join(FIXTURES_ROOT, 'foundry');
         let env: StagenetTestEnv;
@@ -84,7 +84,7 @@ describe('contract.dev upload-contracts', () => {
 
         it('uploads Counter and reports status=created on first run', async () => {
             process.chdir(projectDir);
-            const result = await uploadContractsCommand();
+            const result = await pushContractsCommand();
 
             expect(result.contracts.length).toBeGreaterThan(0);
             const counter = result.contracts.find((c) => c.name === 'Counter');
@@ -96,7 +96,7 @@ describe('contract.dev upload-contracts', () => {
 
         it('reports status=unchanged when run again with the same artifacts', async () => {
             process.chdir(projectDir);
-            const result = await uploadContractsCommand();
+            const result = await pushContractsCommand();
             const counter = result.contracts.find((c) => c.name === 'Counter');
             expect(counter).toBeDefined();
             expect(counter!.status).toBe('unchanged');
@@ -127,7 +127,7 @@ describe('contract.dev upload-contracts', () => {
 
         it('uploads SimpleStorage and reports status=created on first run', async () => {
             process.chdir(projectDir);
-            const result = await uploadContractsCommand();
+            const result = await pushContractsCommand();
 
             const stored = result.contracts.find((c) => c.name === 'SimpleStorage');
             expect(stored).toBeDefined();
@@ -137,7 +137,7 @@ describe('contract.dev upload-contracts', () => {
 
         it('reports status=unchanged when run again', async () => {
             process.chdir(projectDir);
-            const result = await uploadContractsCommand();
+            const result = await pushContractsCommand();
             const stored = result.contracts.find((c) => c.name === 'SimpleStorage');
             expect(stored).toBeDefined();
             expect(stored!.status).toBe('unchanged');
@@ -175,7 +175,7 @@ describe('contract.dev upload-contracts', () => {
 
         it('uploads Counter and reports status=created on first run', async () => {
             process.chdir(projectDir);
-            const result = await uploadContractsCommand();
+            const result = await pushContractsCommand();
 
             const counter = result.contracts.find((c) => c.name === 'Counter');
             expect(counter).toBeDefined();
@@ -184,7 +184,7 @@ describe('contract.dev upload-contracts', () => {
 
         it('reports status=unchanged when run again', async () => {
             process.chdir(projectDir);
-            const result = await uploadContractsCommand();
+            const result = await pushContractsCommand();
             const counter = result.contracts.find((c) => c.name === 'Counter');
             expect(counter).toBeDefined();
             expect(counter!.status).toBe('unchanged');
@@ -253,7 +253,7 @@ describe('contract.dev upload-contracts', () => {
 
         it('finds SimpleStorage at artifacts/src and uploads it', async () => {
             process.chdir(tmpDir);
-            const result = await uploadContractsCommand();
+            const result = await pushContractsCommand();
 
             const stored = result.contracts.find((c) => c.name === 'SimpleStorage');
             expect(stored).toBeDefined();

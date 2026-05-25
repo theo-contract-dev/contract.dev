@@ -1,6 +1,7 @@
 import { Wallet } from 'ethers';
 import { loadConfig, resolveRpcUrl } from '../config';
 import { callRpc } from '../rpc';
+import { fetchStagenetInfo } from '../stagenet-info';
 
 interface AddBalanceResult {
   address: string;
@@ -24,15 +25,19 @@ export async function generateWalletCommand(): Promise<GeneratedWallet> {
   console.log('Generated wallet');
   console.log(`  Address:     ${wallet.address}`);
   console.log(`  Private key: ${wallet.privateKey}`);
-  console.log('  (save the private key now — it is not stored)');
+
+  console.log('\nSave the private key now — it is not stored.');
 
   console.log('\nFunding wallet...');
-  await callRpc<AddBalanceResult>(rpcUrl, 'dev_addBalance', [
-    wallet.address,
-    FUND_AMOUNT_WEI,
+  const [info] = await Promise.all([
+    fetchStagenetInfo(rpcUrl),
+    callRpc<AddBalanceResult>(rpcUrl, 'dev_addBalance', [
+      wallet.address,
+      FUND_AMOUNT_WEI,
+    ]),
   ]);
 
-  console.log('Funded with 1,000,000 native tokens.');
+  console.log(`Funded with 1,000,000 ${info.nativeCurrency.symbol}.`);
 
   return { address: wallet.address, privateKey: wallet.privateKey };
 }

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, parse as parsePath, resolve } from 'node:path';
+import { relPath } from '../format';
 
 const PLACEHOLDER = '<YOUR_STAGENET_RPC_URL>';
 
@@ -49,14 +50,14 @@ export async function initCommand(args: string[]): Promise<void> {
     .find((p) => existsSync(p));
 
   if (existingPath && !force) {
-    console.error(`${existingPath} already exists`);
+    console.error(`${relPath(existingPath)} already exists`);
     console.error('Use --force to overwrite.');
     process.exit(1);
   }
 
   writeFileSync(existingPath ?? path, template(url));
 
-  console.log(`Created ${existingPath ?? path}`);
+  console.log(`Created ${relPath(existingPath ?? path)}`);
   if (url === PLACEHOLDER) {
     console.log(`Edit it and replace ${PLACEHOLDER} with your Stagenet RPC URL`);
     console.log('(copy it from your project dashboard at https://contract.dev).');

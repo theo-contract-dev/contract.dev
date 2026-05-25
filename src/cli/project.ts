@@ -3,14 +3,22 @@ import { join, resolve } from 'node:path';
 
 export type ProjectType = 'foundry' | 'hardhat';
 
+// Where a resolved path came from. Used to tailor error messages: when an
+// auto-detected path doesn't exist, we want to point the user at the override
+// in contract.dev.js rather than re-explain that paths in hardhat.config can be
+// computed and we couldn't read them.
+export type PathSource = 'override' | 'config' | 'default';
+
 export interface ProjectInfo {
   type: ProjectType;
   // Absolute path to project root (where foundry.toml or hardhat.config.* live).
   root: string;
   // Absolute path to where user-authored contracts live (e.g. src/ or contracts/).
   sourceDir: string;
+  sourceDirSource: PathSource;
   // Absolute path to where compiled artifacts live (e.g. out/ or artifacts/contracts/).
   artifactsDir: string;
+  artifactsDirSource: PathSource;
 }
 
 const HH_CONFIG_NAMES = [
@@ -33,7 +41,9 @@ export function detectProject(
       type: 'foundry',
       root,
       sourceDir: resolve(root, sourceOverride ?? src ?? 'src'),
+      sourceDirSource: sourceOverride ? 'override' : src ? 'config' : 'default',
       artifactsDir: resolve(root, artifactsOverride ?? out ?? 'out'),
+      artifactsDirSource: artifactsOverride ? 'override' : out ? 'config' : 'default',
     };
   }
 
@@ -50,9 +60,15 @@ export function detectProject(
       type: 'hardhat',
       root,
       sourceDir: resolve(root, sourcesRel),
+      sourceDirSource: sourceOverride ? 'override' : sources ? 'config' : 'default',
       artifactsDir: artifactsOverride
         ? resolve(root, artifactsOverride)
         : resolve(root, artifactsBase, sourcesRel),
+      artifactsDirSource: artifactsOverride
+        ? 'override'
+        : artifacts
+        ? 'config'
+        : 'default',
     };
   }
 
@@ -61,27 +77,52 @@ export function detectProject(
   );
 }
 
-// Minimal foundry.toml parser — we only need [profile.default].src and .out.
-// Full TOML is unnecessary and adds a dep; this handles the keys we care about.
+// Minimal foundry.toml parser — we only need src and out. Full TOML is
+// unnecessary and adds a dep; this handles the keys we care about.
+//
+// Honors FOUNDRY_PROFILE the same way `forge` does: keys from the named
+// profile override [profile.default], everything else inherits. So
+// FOUNDRY_PROFILE=production forge build && contract.dev push-contracts
+// reads from [profile.production] first and falls back to [profile.default]
+// for anything that profile doesn't set.
 function parseFoundryToml(path: string): { src?: string; out?: string } {
   const raw = readFileSync(path, 'utf8');
-  const lines = raw.split('\n');
-  let inDefaultProfile = false;
+  const profile = process.env.FOUNDRY_PROFILE?.trim() || 'default';
+
+  const defaults = readFoundryProfile(raw, 'default');
+  if (profile === 'default') return defaults;
+
+  const overlay = readFoundryProfile(raw, profile);
+  // Spread defaults first so any key set in the named profile wins.
+  return { ...defaults, ...overlay };
+}
+
+function readFoundryProfile(
+  raw: string,
+  profileName: string,
+): { src?: string; out?: string } {
+  // [profile.default] is the canonical form; bare [default] is the legacy alias
+  // and is only valid for the default profile.
+  const aliases =
+    profileName === 'default'
+      ? new Set(['profile.default', 'default'])
+      : new Set([`profile.${profileName}`]);
+
+  let inProfile = false;
   let src: string | undefined;
   let out: string | undefined;
 
-  for (const rawLine of lines) {
+  for (const rawLine of raw.split('\n')) {
     const line = rawLine.replace(/#.*$/, '').trim();
     if (!line) continue;
 
     const sectionMatch = line.match(/^\[(.+?)\]$/);
     if (sectionMatch) {
-      const section = sectionMatch[1].trim();
-      inDefaultProfile = section === 'profile.default' || section === 'default';
+      inProfile = aliases.has(sectionMatch[1].trim());
       continue;
     }
 
-    if (!inDefaultProfile) continue;
+    if (!inProfile) continue;
 
     const kv = line.match(/^(\w+)\s*=\s*(.+)$/);
     if (!kv) continue;
@@ -92,7 +133,13 @@ function parseFoundryToml(path: string): { src?: string; out?: string } {
     if (key === 'out') out = value;
   }
 
-  return { src, out };
+  // Only include keys that were actually set in this profile. Returning
+  // explicit `{ src: undefined }` would clobber the default profile's `src`
+  // when this object is spread on top of it.
+  const result: { src?: string; out?: string } = {};
+  if (src !== undefined) result.src = src;
+  if (out !== undefined) result.out = out;
+  return result;
 }
 
 // Best-effort parse of hardhat.config.{ts,js,cjs,mjs} for `paths.sources` and

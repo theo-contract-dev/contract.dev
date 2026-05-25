@@ -1,18 +1,8 @@
 # contract.dev
 
-A TypeScript SDK and CLI for working with a [contract.dev](https://contract.dev) Stagenet.
+TypeScript SDK and CLI for working with a [contract.dev](https://contract.dev) Stagenet.
 
-Use it to:
-
-1. Upload contract artifacts from your Hardhat or Foundry project to your Stagenet.
-2. Interact with your Stagenet from scripts by:
-   - Minting native tokens or ERC20s
-   - Impersonating accounts
-   - Overriding Stagenet state
-
-When you deploy a previously uploaded contract to your Stagenet, a Workspace is created for it automatically.
-
-A Workspace is a custom dashboard for a contract. It shows transactions, balances, TVL, storage, and tracked data over time.
+Push your Hardhat or Foundry contracts to a Stagenet, then mint balances, impersonate accounts, override state, and track on-chain values over time — from scripts or the CLI. Each pushed contract gets a Workspace: a custom dashboard with transactions, balances, storage, and tracked data.
 
 ## Install
 
@@ -22,118 +12,62 @@ npm install contract.dev
 
 ## Setup
 
-Create a `contract.dev.js` file in your project root:
-
 ```bash
 contract.dev init
 ```
 
-Add your Stagenet RPC URL:
+Then add your Stagenet RPC URL to `contract.dev.js`:
 
 ```js
 /** @type {import('contract.dev').Config} */
 module.exports = {
-  // Use the RPC URL from your Stagenet dashboard
   rpcUrl: "<YOUR_STAGENET_RPC_URL>"
 };
 ```
 
-Use `contract.dev.cjs` instead if your `package.json` has `"type": "module"`.
+Use `contract.dev.cjs` if your `package.json` has `"type": "module"`.
 
-## Upload contracts
+## Push contracts
 
-Use the CLI to upload contract artifacts from a Hardhat or Foundry project.
-Uploaded contracts are matched against deployments on your Stagenet.
-When a matching contract is deployed, a Workspace is created for it automatically.
-
-With a `contract.dev.js` at your project root:
+After `forge build` or `npx hardhat compile`:
 
 ```bash
-contract.dev upload-contracts
+contract.dev push-contracts
 ```
 
-The CLI reads compiled build artifacts.
-It does not build your project automatically, so run `forge build` or `npx hardhat compile` first.
+Each contract becomes a pending Workspace, matched to deployments by bytecode. Re-run after each rebuild — unchanged contracts are no-ops.
 
-## Interact with Stagenet
+## Use the SDK
 
 ```ts
 import { createStagenet } from "contract.dev";
 
-const stagenet = createStagenet("<YOUR_STAGENET_RPC_URL>");
-```
-
-Or call `createStagenet()` with no arguments to use the URL in `contract.dev.js`:
-
-```ts
+// Loads rpcUrl from contract.dev.js, or pass one explicitly
 const stagenet = createStagenet();
-```
 
-### Balances
-
-Change token balances.
-
-```ts
-await stagenet.addBalance(addr, 10n ** 18n);            // +1 ETH (additive)
-await stagenet.setBalance(addr, 0n);                    // overwrite
-
+await stagenet.addBalance(addr, 10n ** 18n);            // +1 ETH
 await stagenet.addERC20Balance(addr, usdc, 1_000_000n); // +1 USDC
-await stagenet.setERC20Balance(addr, usdc, 0n);         // overwrite
-```
-
-### State overrides
-
-Override the on-chain state of your Stagenet.
-
-```ts
-await stagenet.setCode(addr, "0x6042...");
-
-await stagenet.setNonce(addr, 42);
-
-// Slot and value must be exactly 32-byte hex words (0x + 64 hex chars)
-const pad = (n: bigint) => "0x" + n.toString(16).padStart(64, "0");
-await stagenet.setStorageAt(addr, pad(0n), pad(42n));
-```
-
-### Impersonation
-
-Send Stagenet transactions from an address without holding its private key.
-
-```ts
-import { ethers } from "ethers";
-
-const provider = new ethers.JsonRpcProvider("<YOUR_STAGENET_RPC_URL>");
-
-const whale = "0x28C6c06298d514Db089934071355E5743bf21d60";
-const recipient = "0x1111111111111111111111111111111111111111";
-const usdc = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-
-const erc20 = new ethers.Contract(
-  usdc,
-  [
-    "function transfer(address to, uint256 amount) returns (bool)"
-  ],
-  provider
-);
-
-// Start impersonating the address
 await stagenet.impersonateAccount(whale);
-
-// Get a JSON-RPC signer for the impersonated address
-const signer = await provider.getSigner(whale);
-
-// Send the transaction as the impersonated address
-await erc20.connect(signer).transfer(recipient, 1_000_000n);
-
-// Stop impersonating when finished
-await stagenet.stopImpersonatingAccount(whale);
+await stagenet.setStorageAt(addr, slot, value);
 ```
 
-Impersonation only works with transactions sent through `eth_sendTransaction`.
-If your wallet signs locally with a private key, it will use `eth_sendRawTransaction`, and impersonation will not apply.
+## CLI
 
-Use a JSON-RPC signer instead, such as `provider.getSigner(address)` in ethers.
+```
+contract.dev init                 Create contract.dev.js
+contract.dev push-contracts       Push compiled artifacts
+contract.dev generate-wallet      Generate + fund a wallet
+contract.dev workspace add        Attach a Workspace to an address
+contract.dev balance              Change native balances
+contract.dev erc20-balance        Change ERC20 balances
+contract.dev state                Override code / nonce / storage
+contract.dev impersonate          Impersonate an address
+contract.dev function-override    Override contract function results
+contract.dev track                Record on-chain state over time
+```
+
+Run `contract.dev <command> help` for per-command flags.
 
 ## Docs
 
-Full reference is available in our [docs](https://docs.contract.dev/sdk-and-cli).
+Full reference: [docs.contract.dev](https://docs.contract.dev/sdk-and-cli).
