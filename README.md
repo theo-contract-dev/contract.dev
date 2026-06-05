@@ -27,12 +27,12 @@ module.exports = {
 
 Use `contract.dev.cjs` if your `package.json` has `"type": "module"`.
 
-## Push contracts
+## Import contracts
 
 After `forge build` or `npx hardhat compile`:
 
 ```bash
-contract.dev push-contracts
+contract.dev import-contracts
 ```
 
 Each contract becomes a pending Workspace, matched to deployments by bytecode. Re-run after each rebuild — unchanged contracts are no-ops.
@@ -55,7 +55,7 @@ await stagenet.setStorageAt(addr, slot, value);
 
 ```
 contract.dev init                 Create contract.dev.js
-contract.dev push-contracts       Push compiled artifacts
+contract.dev import-contracts     Import compiled artifacts
 contract.dev generate-wallet      Generate + fund a wallet
 contract.dev workspace add        Attach a Workspace to an address
 contract.dev balance              Change native balances

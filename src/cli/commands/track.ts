@@ -1,7 +1,7 @@
 import { loadConfig, resolveRpcUrl } from '../config';
 import { callRpc } from '../rpc';
 
-// Schema mirrors packages/client/src/types/tracked-items.ts on the backend.
+// Mirrors the tracked-item schema returned by the Stagenet backend.
 interface TrackedItem {
   address: string;
   name: string;

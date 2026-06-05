@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { initCommand } from './commands/init';
-import { pushContractsCommand } from './commands/push-contracts';
+import { importContractsCommand } from './commands/import-contracts';
 import { generateWalletCommand } from './commands/generate-wallet';
 import { trackCommand } from './commands/track';
 import { functionOverrideCommand } from './commands/function-override';
@@ -15,7 +15,7 @@ Setup:
   contract.dev init                       Create a contract.dev.js in the current directory
   contract.dev init --rpc-url=<url>       Init with your Stagenet URL filled in
   contract.dev init --force               Overwrite an existing contract.dev.{js,cjs}
-  contract.dev push-contracts             Push compiled contracts to your Stagenet (creates/updates Workspaces)
+  contract.dev import-contracts           Import compiled contracts to your Stagenet (creates/updates Workspaces)
   contract.dev workspace add <address>    Attach a Workspace to an address (auto-detects wallet/mainnet/manual)
   contract.dev generate-wallet            Generate a fresh wallet and fund it with 1,000,000 native tokens
 
@@ -44,8 +44,8 @@ async function main() {
     case 'init':
       await initCommand(rest);
       return;
-    case 'push-contracts':
-      await pushContractsCommand();
+    case 'import-contracts':
+      await importContractsCommand();
       return;
     case 'generate-wallet':
       await generateWalletCommand();

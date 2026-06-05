@@ -4,7 +4,7 @@ import { loadArtifacts } from '../artifacts';
 import { relPath } from '../format';
 import { callRpc } from '../rpc';
 
-interface PushContractsResult {
+interface ImportContractsResult {
   contracts: Array<{
     name: string;
     projectContractId: string;
@@ -13,7 +13,7 @@ interface PushContractsResult {
   }>;
 }
 
-export async function pushContractsCommand(): Promise<PushContractsResult> {
+export async function importContractsCommand(): Promise<ImportContractsResult> {
   const { config, projectRoot } = loadConfig();
 
   const project = detectProject(projectRoot, config.contracts, config.artifacts);
@@ -32,8 +32,8 @@ export async function pushContractsCommand(): Promise<PushContractsResult> {
 
   const rpcUrl = resolveUrlFromConfig(config);
 
-  console.log(`Pushing ${contracts.length} contract(s) to stagenet...\n`);
-  const result = await callRpc<PushContractsResult>(rpcUrl, 'dev_importContracts', [{ contracts }]);
+  console.log(`Importing ${contracts.length} contract(s) to stagenet...\n`);
+  const result = await callRpc<ImportContractsResult>(rpcUrl, 'dev_importContracts', [{ contracts }]);
 
   const nameWidth = Math.max(8, ...result.contracts.map((r) => r.name.length));
   for (const r of result.contracts) {

@@ -8,7 +8,6 @@ module.exports = {
         }],
     },
     testTimeout: 600000,
-    setupFiles: ['./test/jest.setup.js'],
     clearMocks: true,
     forceExit: true,
 };

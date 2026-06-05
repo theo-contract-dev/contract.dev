@@ -184,7 +184,7 @@ export interface GetTrackedItemsFilter {
 //   - `address` only, no on-chain code → wallet workspace
 //   - `address` only, code matches mainnet → mainnet-contract workspace
 //   - `address` only, code DOESN'T match mainnet → server returns an
-//     actionable error pointing you at `--abi` or `push-contracts`.
+//     actionable error pointing you at `--abi` or `import-contracts`.
 // You never need to declare a "type" — the inputs alone determine the result.
 export interface AddWorkspaceInput {
   // The address to attach the workspace to. Omit only for ABI-only manual
@@ -330,7 +330,7 @@ export class Stagenet {
   // flow. The server auto-dispatches based on inputs — see AddWorkspaceInput.
   // If you pass `address` for a contract that lives only on your Stagenet (not
   // mainnet) and don't include `abi`, the server returns an actionable error
-  // pointing you at `--abi` or `push-contracts`.
+  // pointing you at `--abi` or `import-contracts`.
   addWorkspace(input: AddWorkspaceInput): Promise<AddWorkspaceResult> {
     return this.call('dev_addWorkspace', [input]);
   }

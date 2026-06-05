@@ -1,7 +1,7 @@
 import { loadConfig, resolveRpcUrl } from '../config';
 import { callRpc } from '../rpc';
 
-// Schema mirrors packages/client/src/types/function-overrides.ts on the backend.
+// Mirrors the function-override schema returned by the Stagenet backend.
 interface FunctionOverride {
   id: string;
   contractAddress: string;

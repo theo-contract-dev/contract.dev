@@ -1,6 +1,6 @@
 {
   "name": "contract.dev",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,11 +15,7 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "prepublishOnly": "tsc",
-    "test": "jest",
-    "test:foundry": "jest test/integration/push-contracts.test.ts -t Foundry",
-    "test:hh-v2": "jest test/integration/push-contracts.test.ts -t \"Hardhat v2\"",
-    "test:hh-v3": "jest test/integration/push-contracts.test.ts -t \"Hardhat v3\"",
-    "test:wallet": "jest test/integration/generate-wallet.test.ts"
+    "test": "jest"
   },
   "dependencies": {
     "ethers": "^6.13.5"

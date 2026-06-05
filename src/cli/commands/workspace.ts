@@ -33,8 +33,8 @@ The CLI auto-detects which kind of Workspace to create from what you pass:
                                                        (with or without address)
 
 If the address has code on your Stagenet that doesn't match mainnet (e.g. a
-contract you deployed locally outside push-contracts), the server errors and
-tells you to pass --abi or run push-contracts.
+contract you deployed locally outside import-contracts), the server errors and
+tells you to pass --abi or run import-contracts.
 
 Options:
   --name <name>      Display name shown in the dashboard. Required.
