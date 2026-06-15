@@ -211,6 +211,55 @@ export type AddWorkspaceResult =
       projectContractDeployment: { id: string; address: string } | null;
     };
 
+// Results of the mainnet-follow methods. `residueCleared` is the number of
+// previously-persisted local slots that were removed when (un)following — from
+// that moment the key reads live mainnet (follow) or behaves as never-touched
+// (unfollow).
+export interface FollowAccountResult {
+  address: string;
+  followed: boolean;
+  residueCleared: number;
+}
+
+export interface UnfollowAccountResult {
+  address: string;
+  removed: boolean;
+  residueCleared: number;
+}
+
+export interface FollowSlotsResult {
+  address: string;
+  followedSlots: string[];
+  residueCleared: number;
+}
+
+export interface UnfollowSlotsResult {
+  address: string;
+  removed: number;
+  residueCleared: number;
+}
+
+export interface FollowTokenBalanceResult {
+  token: string;
+  holder: string;
+  // The balanceOf[holder] storage slot the Stagenet discovered and followed.
+  slot: string;
+  residueCleared: number;
+}
+
+export interface UnfollowTokenBalanceResult {
+  token: string;
+  holder: string;
+  slot: string;
+  removed: number;
+}
+
+// Everything currently followed on the Stagenet.
+export interface FollowedState {
+  accounts: string[];
+  slots: Record<string, string[]>;
+}
+
 export class Stagenet {
   readonly rpcUrl: string;
 
@@ -262,11 +311,60 @@ export class Stagenet {
     return this.call('dev_setNonce', [address, normalizeAmount(nonce)]);
   }
 
-  // Set a storage slot at an address. Both `slot` and `value` must be exact
-  // 32-byte hex words (`0x` + 64 hex chars). Short inputs are rejected — encode
-  // explicitly (e.g. `"0x" + n.toString(16).padStart(64, "0")`).
-  setStorageAt(address: string, slot: string, value: string): Promise<StorageResult> {
-    return this.call('dev_setStorageAt', [address, slot, value]);
+  // Set a storage slot at an address. `slot` is a 0x hex key (≤32 bytes,
+  // left-padded) or a decimal slot number (5 / "5" / 5n — note "10" is slot
+  // ten, not 0x10). `value` must be an exact 32-byte hex word — uint-vs-bytes
+  // padding is ambiguous for values, so encode explicitly
+  // (e.g. `"0x" + n.toString(16).padStart(64, "0")`).
+  setStorageAt(address: string, slot: string | number | bigint, value: string): Promise<StorageResult> {
+    return this.call('dev_setStorageAt', [address, normalizeSlotKey(slot), value]);
+  }
+
+  // Follow a whole contract: every storage slot reads LIVE mainnet from now on,
+  // masking anything previously persisted locally. Writes still work normally
+  // within a transaction/block but are discarded at block seal — a standing
+  // mode, not a one-shot copy. Use for contracts holding only market state
+  // (AMM pools, RFQ settlements, oracles); for shared contracts like tokens use
+  // followTokenBalance / followSlots instead so user balances keep persisting.
+  // See https://docs.contract.dev/platform-features/mainnet-follow
+  followAccount(address: string): Promise<FollowAccountResult> {
+    return this.call('dev_followAccount', [address]);
+  }
+
+  // Stop following a contract. Local history for it was cleared, so it behaves
+  // as never-touched: it keeps tracking mainnet until your next write.
+  unfollowAccount(address: string): Promise<UnfollowAccountResult> {
+    return this.call('dev_unfollowAccount', [address]);
+  }
+
+  // Follow specific storage slots on a contract. Each slot is a 32-byte hex
+  // key, or a decimal slot number (5, "5", 5n — declared slot five) for
+  // non-mapping state. An unprefixed "10" is slot ten, not 0x10.
+  followSlots(address: string, slots: Array<string | number | bigint>): Promise<FollowSlotsResult> {
+    return this.call('dev_followSlots', [address, slots.map(normalizeSlotKey)]);
+  }
+
+  // Stop following specific storage slots.
+  unfollowSlots(address: string, slots: Array<string | number | bigint>): Promise<UnfollowSlotsResult> {
+    return this.call('dev_unfollowSlots', [address, slots.map(normalizeSlotKey)]);
+  }
+
+  // Follow one holder's balance on a token without computing the storage slot —
+  // the Stagenet discovers balanceOf[holder]'s slot (works with proxies and
+  // non-standard layouts) and follows just that key. Other balances on the
+  // token are untouched.
+  followTokenBalance(token: string, holder: string): Promise<FollowTokenBalanceResult> {
+    return this.call('dev_followTokenBalance', [token, holder]);
+  }
+
+  // Stop following a holder's balance on a token.
+  unfollowTokenBalance(token: string, holder: string): Promise<UnfollowTokenBalanceResult> {
+    return this.call('dev_unfollowTokenBalance', [token, holder]);
+  }
+
+  // Everything currently followed on this Stagenet.
+  getFollowed(): Promise<FollowedState> {
+    return this.call('dev_getFollowed', []);
   }
 
   // Mark an account as impersonated — eth_sendTransaction from this address
@@ -403,6 +501,18 @@ export class Stagenet {
 
 function normalizeAmount(amount: string | bigint | number): string {
   return BigInt(amount).toString();
+}
+
+// Slot keys: pass 0x hex through untouched; convert decimal slot numbers
+// (5, "5", 5n) to the canonical 32-byte hex key client-side, so they work
+// against Stagenets that predate server-side decimal support.
+function normalizeSlotKey(slot: string | number | bigint): string {
+  if (typeof slot === 'string' && !/^\d+$/.test(slot)) return slot;
+  const value = BigInt(slot);
+  if (value < BigInt(0)) throw new Error(`slot number must be non-negative: ${slot}`);
+  const hex = value.toString(16);
+  if (hex.length > 64) throw new Error(`slot number out of range (must fit in 32 bytes): ${slot}`);
+  return '0x' + hex.padStart(64, '0');
 }
 
 // Construct a Stagenet client.

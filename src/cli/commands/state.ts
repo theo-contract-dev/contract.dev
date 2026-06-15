@@ -16,8 +16,9 @@ Usage:
 Notes:
   set-code accepts 0x-prefixed bytecode. Pass "0x" to wipe the code.
   set-nonce accepts a decimal or 0x-hex non-negative integer.
-  set-storage requires both --slot and --value as 32-byte hex words
-    (0x + 64 hex chars). Short hex like "0x42" is rejected — encode explicitly.
+  set-storage --slot accepts a decimal slot number ("5") or 0x hex (≤32 bytes,
+    left-padded). Note "10" is slot ten, not 0x10. --value must be a full
+    32-byte hex word (0x + 64 hex chars) — encode explicitly.
 `;
 
 export async function stateCommand(
@@ -76,17 +77,30 @@ async function setNonceSubcommand(args: string[]): Promise<NonceResult> {
 async function setStorageSubcommand(args: string[]): Promise<StorageResult> {
   const flags = parseFlags(args);
   const address = requirePositional(flags._, 0, 'address');
-  const slot = requireFlag(flags, 'slot');
+  const slotRaw = requireFlag(flags, 'slot');
   const value = requireFlag(flags, 'value');
 
-  // Friendlier client-side error than the server's "32-byte hex word required".
-  for (const [name, v] of [['--slot', slot], ['--value', value]] as const) {
-    if (!/^0x[0-9a-fA-F]{64}$/.test(v)) {
-      throw new Error(
-        `${name} must be a 32-byte hex word (0x + 64 hex chars). Got: ${v}\n` +
-          `  Pad short hex explicitly: "0x" + n.toString(16).padStart(64, "0")`,
-      );
-    }
+  // Slot keys are uint256, so decimal and short hex are unambiguous (left-pad).
+  // Normalized client-side to the canonical 32-byte key, so older Stagenets
+  // accept them too. Note "10" is slot ten, not 0x10.
+  let slot: string;
+  if (/^\d+$/.test(slotRaw)) {
+    const hex = BigInt(slotRaw).toString(16);
+    if (hex.length > 64) throw new Error(`--slot number out of range (must fit in 32 bytes): ${slotRaw}`);
+    slot = '0x' + hex.padStart(64, '0');
+  } else if (/^0x[0-9a-fA-F]{1,64}$/.test(slotRaw)) {
+    slot = '0x' + slotRaw.slice(2).toLowerCase().padStart(64, '0');
+  } else {
+    throw new Error(`--slot must be a decimal slot number or 0x hex (≤32 bytes). Got: ${slotRaw}`);
+  }
+
+  // VALUES keep the strict rule — uint-style vs bytes-style padding is
+  // ambiguous, so callers encode explicitly. Friendlier error than the server's.
+  if (!/^0x[0-9a-fA-F]{64}$/.test(value)) {
+    throw new Error(
+      `--value must be a 32-byte hex word (0x + 64 hex chars). Got: ${value}\n` +
+        `  Pad short hex explicitly: "0x" + n.toString(16).padStart(64, "0")`,
+    );
   }
 
   const rpcUrl = resolveRpcUrl(loadConfig().config);

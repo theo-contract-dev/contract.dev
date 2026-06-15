@@ -8,6 +8,7 @@ import { balanceCommand, erc20BalanceCommand } from './commands/balance';
 import { stateCommand } from './commands/state';
 import { impersonateCommand } from './commands/impersonate';
 import { workspaceCommand } from './commands/workspace';
+import { followCommand, unfollowCommand } from './commands/follow';
 
 const HELP = `contract.dev — work with your stagenet from the command line
 
@@ -24,6 +25,8 @@ Stagenet state:
   contract.dev erc20-balance <sub>        Change ERC20 balances (try: erc20-balance help)
   contract.dev state <sub>                Override code / nonce / storage (try: state help)
   contract.dev impersonate <sub>          Impersonate an address (try: impersonate help)
+  contract.dev follow <sub>               Pin contract state to live mainnet (try: follow help)
+  contract.dev unfollow <address>         Stop following (mirrors follow's flags)
 
 Behavior overrides:
   contract.dev function-override <sub>    Override contract function results (try: function-override help)
@@ -70,6 +73,12 @@ async function main() {
       return;
     case 'workspace':
       await workspaceCommand(rest);
+      return;
+    case 'follow':
+      await followCommand(rest);
+      return;
+    case 'unfollow':
+      await unfollowCommand(rest);
       return;
     case 'help':
     case '-h':
