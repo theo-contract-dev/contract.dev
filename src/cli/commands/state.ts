@@ -1,4 +1,4 @@
-import { loadConfig, resolveRpcUrl } from '../config';
+import { resolveStagenetRpcUrl } from '../target';
 import { callRpc } from '../rpc';
 import { parseFlags, requirePositional, requireFlag, parseAmount } from './_args';
 
@@ -54,7 +54,7 @@ async function setCodeSubcommand(args: string[]): Promise<CodeResult> {
     throw new Error('bytecode must be 0x-prefixed hex (use "0x" to wipe)');
   }
 
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   const result = await callRpc<CodeResult>(rpcUrl, 'dev_setCode', [address, bytecode]);
 
   const len = (bytecode.length - 2) / 2;
@@ -67,7 +67,7 @@ async function setNonceSubcommand(args: string[]): Promise<NonceResult> {
   const address = requirePositional(flags._, 0, 'address');
   const nonce = parseAmount(requirePositional(flags._, 1, 'nonce'), 'nonce');
 
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   const result = await callRpc<NonceResult>(rpcUrl, 'dev_setNonce', [address, nonce]);
 
   console.log(`Set nonce for ${result.address} = ${result.nonce}`);
@@ -103,7 +103,7 @@ async function setStorageSubcommand(args: string[]): Promise<StorageResult> {
     );
   }
 
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   const result = await callRpc<StorageResult>(rpcUrl, 'dev_setStorageAt', [address, slot, value]);
 
   console.log(`Set storage at ${result.address}`);

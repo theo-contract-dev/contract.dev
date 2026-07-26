@@ -1,4 +1,4 @@
-import { loadConfig, resolveRpcUrl } from '../config';
+import { resolveStagenetRpcUrl } from '../target';
 import { callRpc } from '../rpc';
 
 // Mirrors the function-override schema returned by the Stagenet backend.
@@ -83,7 +83,7 @@ async function addSubcommand(args: string[]): Promise<void> {
   const inputParamsRaw = flag(flags, 'input-params');
   const inputParams = inputParamsRaw ? parseJsonStringArray(inputParamsRaw, '--input-params') : undefined;
 
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   const result = await callRpc<FunctionOverride>(rpcUrl, 'dev_addFunctionOverride', [
     {
       contractAddress: address,
@@ -108,7 +108,7 @@ async function listSubcommand(args: string[]): Promise<void> {
   const flags = parseFlags(args);
   const contract = flag(flags, 'contract');
 
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   const items = contract
     ? await callRpc<FunctionOverride[]>(rpcUrl, 'dev_getFunctionOverridesByContract', [contract])
     : await callRpc<FunctionOverride[]>(rpcUrl, 'dev_getFunctionOverrides', []);
@@ -132,7 +132,7 @@ async function updateSubcommand(args: string[]): Promise<void> {
   const id = requirePositional(flags._, 0, 'override id');
   const returnValues = parseJsonStringArray(requireFlag(flags, 'returns'), '--returns');
 
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   const result = await callRpc<FunctionOverride>(rpcUrl, 'dev_updateFunctionOverride', [id, returnValues]);
 
   console.log(`Updated override ${result.id}`);
@@ -146,7 +146,7 @@ async function toggleSubcommand(args: string[], action: 'enable' | 'disable'): P
   const id = requirePositional(flags._, 0, 'override id');
 
   const method = action === 'enable' ? 'dev_enableFunctionOverride' : 'dev_disableFunctionOverride';
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   const result = await callRpc<FunctionOverride>(rpcUrl, method, [id]);
 
   console.log(`${action === 'enable' ? 'Enabled' : 'Disabled'} override ${result.id} (enabled=${result.enabled})`);
@@ -158,7 +158,7 @@ async function removeSubcommand(args: string[]): Promise<void> {
   const flags = parseFlags(args);
   const id = requirePositional(flags._, 0, 'override id');
 
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   await callRpc<{ id: string; removed: boolean }>(rpcUrl, 'dev_removeFunctionOverride', [id]);
   console.log(`Removed override ${id}`);
 }

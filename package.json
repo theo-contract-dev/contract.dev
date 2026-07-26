@@ -2,8 +2,6 @@
   "name": "contract.dev",
   "version": "0.6.1",
   "license": "MIT",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
   "bin": {
     "contract.dev": "dist/cli/index.js"
   },
@@ -12,9 +10,9 @@
     "url": "git+https://github.com/theo-contract-dev/contract.dev.git"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/cli/index.js",
     "watch": "tsc --watch",
-    "prepublishOnly": "tsc",
+    "prepublishOnly": "tsc && chmod +x dist/cli/index.js",
     "test": "jest"
   },
   "dependencies": {

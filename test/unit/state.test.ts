@@ -1,11 +1,5 @@
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-
-import { createStagenet } from '../../src/index';
 import { stateCommand } from '../../src/cli/commands/state';
 
-const ORIGINAL_CWD = process.cwd();
 const RPC_URL = 'https://rpc.contract.dev/test-key';
 
 const SLOT_7 = '0x' + '7'.padStart(64, '0');
@@ -29,40 +23,15 @@ describe('state set-storage slot keys', () => {
     const realFetch = global.fetch;
     afterEach(() => {
         global.fetch = realFetch;
-        process.chdir(ORIGINAL_CWD);
-    });
-
-    describe('SDK', () => {
-        it('setStorageAt normalizes decimal slot numbers; values pass through', async () => {
-            const calls = mockFetch({ dev_setStorageAt: { address: '0xc', slot: SLOT_7 } });
-            const stagenet = createStagenet(RPC_URL);
-
-            await stagenet.setStorageAt('0xContract', 7, VALUE);
-            await stagenet.setStorageAt('0xContract', '7', VALUE);
-            await stagenet.setStorageAt('0xContract', BigInt(7), VALUE);
-            await stagenet.setStorageAt('0xContract', SLOT_7, VALUE);
-
-            for (const call of calls) {
-                expect(call.params).toEqual(['0xContract', SLOT_7, VALUE]);
-            }
-        });
     });
 
     describe('CLI', () => {
-        let tmpDir: string;
-
         beforeEach(() => {
-            tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'contract-dev-state-'));
-            fs.writeFileSync(
-                path.join(tmpDir, 'contract.dev.js'),
-                `module.exports = { rpcUrl: ${JSON.stringify(RPC_URL)} };`,
-            );
-            process.chdir(tmpDir);
+            process.env.CONTRACT_DEV_RPC_URL = RPC_URL;
         });
 
         afterEach(() => {
-            process.chdir(ORIGINAL_CWD);
-            fs.rmSync(tmpDir, { recursive: true, force: true });
+            delete process.env.CONTRACT_DEV_RPC_URL;
         });
 
         it('--slot accepts decimal and short hex, normalized to the 32-byte key', async () => {

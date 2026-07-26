@@ -231,8 +231,8 @@ function findBuildInfoDir(artifactsDir: string, root: string): string | null {
 
 // Multi-line, source-aware error for the "artifacts dir doesn't exist" case.
 // We tailor the advice based on whether the resolved paths came from
-// contract.dev.js, from a successful regex match on the project's config, or
-// from a hard-coded default — because each one calls for different remediation.
+// --contracts/--artifacts flags, from a successful regex match on the project's
+// config, or from a hard-coded default — each one calls for different remediation.
 //
 // For Hardhat in particular, `artifactsDir` is composed from BOTH `paths.sources`
 // (subpath) and `paths.artifacts` (base), so a default fallback on either one
@@ -248,10 +248,10 @@ function buildMissingArtifactsError(project: ProjectInfo): string {
     project.sourceDirSource === 'default' || project.artifactsDirSource === 'default';
 
   if (anyOverride) {
-    // User explicitly set `contracts:` and/or `artifacts:` in contract.dev.js.
-    // Either they pointed at the wrong dir, or they haven't built yet.
+    // User explicitly passed --contracts and/or --artifacts. Either they pointed
+    // at the wrong dir, or they haven't built yet.
     lines.push(
-      `This path uses the "${project.artifactsDirSource === 'override' ? 'artifacts' : 'contracts'}" override from your contract.dev.{js,cjs}.`,
+      `This path comes from the --${project.artifactsDirSource === 'override' ? 'artifacts' : 'contracts'} flag you passed.`,
       `Either fix it to point at where ${project.type === 'foundry' ? 'forge' : 'hardhat'} writes artifacts,`,
       `or run \`${buildCmd}\` first.`,
     );
@@ -268,17 +268,9 @@ function buildMissingArtifactsError(project: ProjectInfo): string {
       `(the parser only matches quoted string literals — computed values, env vars, and imports are invisible),`,
       `so it fell back to the Hardhat default${which.length > 1 ? 's' : ''}.`,
       ``,
-      `If your hardhat.config sets ${which.join(' or ')} dynamically,`,
-      `set them in your contract.dev.{js,cjs} — it's a regular Node module, so the same`,
-      `env vars, path.join calls, and imports work there:`,
+      `If your hardhat.config sets ${which.join(' or ')} dynamically, pass the real paths explicitly:`,
       ``,
-      `    const path = require("path");`,
-      `    const SRC = process.env.CONTRACTS_DIR || "src/protocol";`,
-      `    module.exports = {`,
-      `      rpcUrl: "...",`,
-      `      contracts: SRC,                              // your paths.sources`,
-      `      artifacts: path.join("build/artifacts", SRC), // paths.artifacts + sources subpath`,
-      `    };`,
+      `    contract.dev push-contracts --contracts src/protocol --artifacts build/artifacts/src/protocol`,
       ``,
       `Otherwise, run \`${buildCmd}\` first.`,
       `See https://docs.contract.dev/sdk-and-cli/cli/import-contracts#dynamic-paths`,

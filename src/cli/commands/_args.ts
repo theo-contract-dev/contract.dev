@@ -1,5 +1,5 @@
 // Tiny shared arg-parsing helpers used by every subcommand-style CLI module
-// (track, function-override, balance, state, impersonate, …).
+// (function-override, balance, state, impersonate, …).
 
 export interface ParsedFlags {
   _: string[];

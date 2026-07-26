@@ -1,4 +1,4 @@
-import { loadConfig, resolveRpcUrl } from '../config';
+import { resolveStagenetRpcUrl } from '../target';
 import { callRpc } from '../rpc';
 import { parseFlags, requirePositional, flag, parseAmount } from './_args';
 
@@ -60,7 +60,7 @@ async function startSubcommand(args: string[]): Promise<ImpersonateResult> {
   const address = requirePositional(flags._, 0, 'address');
   const fundRaw = flag(flags, 'fund');
 
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   await callRpc<boolean>(rpcUrl, 'dev_impersonateAccount', [address]);
   console.log(`Impersonating ${address}`);
 
@@ -78,14 +78,14 @@ async function stopSubcommand(args: string[]): Promise<StopImpersonatingResult> 
   const flags = parseFlags(args);
   const address = requirePositional(flags._, 0, 'address');
 
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   await callRpc<boolean>(rpcUrl, 'dev_stopImpersonatingAccount', [address]);
   console.log(`Stopped impersonating ${address}`);
   return { address };
 }
 
 async function listSubcommand(): Promise<string[]> {
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   const accounts = await callRpc<string[]>(rpcUrl, 'dev_getImpersonatedAccounts', []);
 
   if (accounts.length === 0) {

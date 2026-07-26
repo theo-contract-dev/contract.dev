@@ -1,4 +1,4 @@
-import { loadConfig, resolveRpcUrl } from '../config';
+import { resolveStagenetRpcUrl } from '../target';
 import { callRpc } from '../rpc';
 import { parseFlags, requirePositional, flag } from './_args';
 
@@ -103,7 +103,7 @@ async function followOrStop(args: string[], stop: boolean): Promise<unknown> {
     throw new Error('pass either --balance-of or --slots, not both');
   }
 
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
 
   if (balanceOf) {
     const method = stop ? 'dev_unfollowTokenBalance' : 'dev_followTokenBalance';
@@ -142,7 +142,7 @@ async function followOrStop(args: string[], stop: boolean): Promise<unknown> {
 }
 
 async function listSubcommand(): Promise<FollowedState> {
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   const followed = await callRpc<FollowedState>(rpcUrl, 'dev_getFollowed', []);
 
   const slotAddrs = Object.keys(followed.slots ?? {});

@@ -1,5 +1,5 @@
 import { Wallet } from 'ethers';
-import { loadConfig, resolveRpcUrl } from '../config';
+import { resolveStagenetRpcUrl } from '../target';
 import { callRpc } from '../rpc';
 import { fetchStagenetInfo } from '../stagenet-info';
 
@@ -17,8 +17,7 @@ export interface GeneratedWallet {
 }
 
 export async function generateWalletCommand(): Promise<GeneratedWallet> {
-  const { config } = loadConfig();
-  const rpcUrl = resolveRpcUrl(config);
+  const rpcUrl = await resolveStagenetRpcUrl();
 
   const wallet = Wallet.createRandom();
 

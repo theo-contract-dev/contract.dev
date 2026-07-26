@@ -1,5 +1,5 @@
 import { formatUnits } from 'ethers';
-import { loadConfig, resolveRpcUrl } from '../config';
+import { resolveStagenetRpcUrl } from '../target';
 import { callRpc } from '../rpc';
 import { fetchStagenetInfo } from '../stagenet-info';
 import { parseFlags, requirePositional, parseAmount } from './_args';
@@ -83,7 +83,7 @@ async function nativeSubcommand(args: string[], action: 'add' | 'set'): Promise<
   const amount = parseAmount(requirePositional(flags._, 1, 'amount'), 'amount');
 
   const method = action === 'add' ? 'dev_addBalance' : 'dev_setBalance';
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   const [info, result] = await Promise.all([
     fetchStagenetInfo(rpcUrl),
     callRpc<BalanceResult>(rpcUrl, method, [address, amount]),
@@ -105,7 +105,7 @@ async function erc20Subcommand(args: string[], action: 'add' | 'set'): Promise<E
   const amount = parseAmount(requirePositional(flags._, 2, 'amount'), 'amount');
 
   const method = action === 'add' ? 'dev_addERC20Balance' : 'dev_setERC20Balance';
-  const rpcUrl = resolveRpcUrl(loadConfig().config);
+  const rpcUrl = await resolveStagenetRpcUrl();
   const result = await callRpc<ERC20BalanceResult>(rpcUrl, method, [holder, token, amount]);
 
   const verb = action === 'add' ? 'Added' : 'Set';

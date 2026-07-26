@@ -4,9 +4,9 @@ import { join, resolve } from 'node:path';
 export type ProjectType = 'foundry' | 'hardhat';
 
 // Where a resolved path came from. Used to tailor error messages: when an
-// auto-detected path doesn't exist, we want to point the user at the override
-// in contract.dev.js rather than re-explain that paths in hardhat.config can be
-// computed and we couldn't read them.
+// auto-detected path doesn't exist, we want to point the user at the
+// --contracts/--artifacts flags rather than re-explain that paths in
+// hardhat.config can be computed and we couldn't read them.
 export type PathSource = 'override' | 'config' | 'default';
 
 export interface ProjectInfo {
@@ -82,7 +82,7 @@ export function detectProject(
 //
 // Honors FOUNDRY_PROFILE the same way `forge` does: keys from the named
 // profile override [profile.default], everything else inherits. So
-// FOUNDRY_PROFILE=production forge build && contract.dev import-contracts
+// FOUNDRY_PROFILE=production forge build && contract.dev push-contracts
 // reads from [profile.production] first and falls back to [profile.default]
 // for anything that profile doesn't set.
 function parseFoundryToml(path: string): { src?: string; out?: string } {
@@ -146,7 +146,7 @@ function readFoundryProfile(
 // `paths.artifacts`. Avoids actually requiring the config (which would pull in
 // hardhat + ts-node + plugins). Strips line/block comments first so commented-out
 // settings don't trigger false matches. For configs that compute paths dynamically
-// the user can set `artifacts` / `contracts` in contract.dev.{js,cjs}.
+// the user passes --contracts / --artifacts to push-contracts.
 function parseHardhatConfig(configPath: string): { sources?: string; artifacts?: string } {
   let raw: string;
   try {
