@@ -16,11 +16,10 @@ const HELP = `contract.dev login — connect the CLI to your contract.dev accoun
 Usage:
   contract.dev login                    Device-code sign-in (opens the browser)
   contract.dev login --no-browser       Print the activation URL instead of opening it
-  contract.dev login --api-url <url>    Sign in against another deployment (e.g. http://localhost:3000)
 
-The CLI shows a one-time code and opens <api-url>/activate. Approving there mints
-an API key bound to your account and chosen workspace, saved to
-~/.contract.dev/credentials.json. In CI, skip login and set CONTRACT_DEV_API_KEY instead.
+The CLI shows a one-time code and opens the activation page. Approving there saves
+credentials bound to your account and chosen workspace to
+~/.contract.dev/credentials.json.
 `;
 
 interface DeviceStart {
@@ -145,18 +144,18 @@ export async function loginCommand(args: string[]): Promise<void> {
 export async function whoamiCommand(): Promise<void> {
   const auth = resolveAuth();
   if (!auth) {
-    console.error('Not logged in. Run `contract.dev login` (or set CONTRACT_DEV_API_KEY).');
+    console.error('Not logged in. Run `contract.dev login`.');
     process.exit(1);
   }
   const payload = await apiRequest<WhoamiPayload>(auth, 'GET', '/api/cli/whoami');
   console.log(`${payload.email ?? 'unknown user'}${payload.org?.name ? ` (workspace: ${payload.org.name})` : ''}`);
-  console.log(`Auth: ${auth.source === 'env' ? 'CONTRACT_DEV_API_KEY env var' : credentialsPath()} → ${auth.apiUrl}`);
+  console.log(`Auth: ${auth.source === 'env' ? 'environment credentials' : credentialsPath()} → ${auth.apiUrl}`);
 }
 
 export async function logoutCommand(): Promise<void> {
   const removed = clearCredentials();
   console.log(removed ? `Removed ${credentialsPath()}` : 'No saved credentials to remove.');
   if (process.env.CONTRACT_DEV_API_KEY) {
-    console.log('Note: CONTRACT_DEV_API_KEY is set in this shell and still authenticates.');
+    console.log('Note: environment credentials are set in this shell and still authenticate.');
   }
 }

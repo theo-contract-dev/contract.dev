@@ -88,7 +88,7 @@ async function useStagenet(args: string[]): Promise<void> {
   const stored = loadCredentials();
   if (!stored) {
     throw new Error(
-      'Credentials come from CONTRACT_DEV_API_KEY — set CONTRACT_DEV_STAGENET instead of `stagenet use`.',
+      'Signed in via environment credentials — set CONTRACT_DEV_STAGENET instead of `stagenet use`.',
     );
   }
   saveCredentials({

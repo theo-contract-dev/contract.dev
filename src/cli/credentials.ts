@@ -96,7 +96,7 @@ export function resolveAuth(): ResolvedAuth | null {
 export function requireAuth(): ResolvedAuth {
   const auth = resolveAuth();
   if (!auth) {
-    throw new Error('Not logged in. Run `contract.dev login` (or set CONTRACT_DEV_API_KEY).');
+    throw new Error('Not logged in. Run `contract.dev login`.');
   }
   return auth;
 }

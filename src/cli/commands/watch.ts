@@ -15,7 +15,7 @@ Flags (watch <address>):
                    Omit to let the server detect where the wallet is active.
 
 Watched accounts appear on the home map and /accounts. Requires
-\`contract.dev login\` (or CONTRACT_DEV_API_KEY).
+\`contract.dev login\`.
 `;
 
 // The unified shape returned by the app's watchlist API.
