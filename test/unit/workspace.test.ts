@@ -45,7 +45,7 @@ describe('workspace switching', () => {
         global.fetch = jest.fn(async (url: any, init: any) => {
             const u = String(url);
             if (u.endsWith('/api/cli/whoami')) return { ok: true, status: 200, json: async () => WHOAMI } as any;
-            if (u.endsWith('/api/mainnet/accounts')) {
+            if (u.startsWith(API_URL + '/api/mainnet/accounts')) {
                 accountsHeaders = init?.headers;
                 return { ok: true, status: 200, json: async () => ({ accounts: [] }) } as any;
             }
@@ -76,7 +76,7 @@ describe('workspace switching', () => {
         let accountsHeaders: any = null;
         global.fetch = jest.fn(async (url: any, init: any) => {
             const u = String(url);
-            if (u.endsWith('/api/mainnet/accounts')) {
+            if (u.startsWith(API_URL + '/api/mainnet/accounts')) {
                 accountsHeaders = init?.headers;
                 return { ok: true, status: 200, json: async () => ({ accounts: [] }) } as any;
             }

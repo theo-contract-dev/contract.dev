@@ -1,81 +1,75 @@
 import { watchCommand, unwatchCommand } from '../../src/cli/commands/watch';
+import { mockApi, useEnvAuth, printed } from './_mockApi';
 
-const API_URL = 'https://test.contract.dev';
+const USDC = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
 
-function mockApi(handlers: Record<string, (init: any) => { status?: number; payload: unknown }>) {
-    const calls: Array<{ method: string; url: string; auth?: string; body: any }> = [];
-    global.fetch = jest.fn(async (url: any, init: any) => {
-        const u = String(url);
-        const method = init?.method ?? 'GET';
-        calls.push({
-            method,
-            url: u,
-            auth: init?.headers?.Authorization,
-            body: init?.body ? JSON.parse(init.body) : null,
-        });
-        const key = `${method} ${u.slice(API_URL.length)}`;
-        const handler = handlers[key];
-        if (!handler) throw new Error(`Unexpected fetch: ${key}`);
-        const { status = 200, payload } = handler(init);
-        return { ok: status < 400, status, json: async () => payload } as any;
-    }) as any;
-    return calls;
-}
+describe('watch / unwatch (mainnet contracts)', () => {
+    useEnvAuth();
 
-describe('watch / unwatch (mainnet watchlist)', () => {
-    const realFetch = global.fetch;
-
-    beforeEach(() => {
-        process.env.CONTRACT_DEV_API_KEY = 'env-key';
-        process.env.CONTRACT_DEV_API_URL = API_URL;
-    });
-
-    afterEach(() => {
-        global.fetch = realFetch;
-        delete process.env.CONTRACT_DEV_API_KEY;
-        delete process.env.CONTRACT_DEV_API_URL;
-    });
-
-    it('watch posts the address with bearer auth and prints the result', async () => {
+    it('detects first, then adds with the detected type + name as hints (one classification)', async () => {
         const calls = mockApi({
-            'POST /api/mainnet/accounts': () => ({
+            'POST /api/mainnet/accounts/detect': () => ({ payload: { accountType: 'contract', detectedName: 'USD Coin', contractType: 'ERC20' } }),
+            'POST /api/mainnet/accounts': (c) => ({
                 status: 201,
-                payload: {
-                    created: true,
-                    account: {
-                        id: 'wc1',
-                        chainId: 8453,
-                        chainIds: [8453],
-                        address: '0xabc',
-                        accountType: 'contract',
-                        name: 'Treasury',
-                    },
-                },
+                payload: { created: true, account: { id: 'wc1', chainId: 8453, chainIds: [8453], address: USDC.toLowerCase(), accountType: 'contract', name: c.body.name } },
             }),
         });
 
-        await watchCommand(['0xAbC', '--chain', '8453', '--name', 'Treasury']);
+        await watchCommand([USDC, '--chain', '8453']);
 
+        expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual(['POST /api/mainnet/accounts/detect', 'POST /api/mainnet/accounts']);
         expect(calls[0].auth).toBe('Bearer env-key');
-        expect(calls[0].body).toEqual({ chainId: 8453, address: '0xAbC', name: 'Treasury' });
+        expect(calls[0].body).toEqual({ chainId: 8453, address: USDC });
+        expect(calls[1].body).toEqual({ chainId: 8453, address: USDC, accountType: 'contract', contractType: 'ERC20', name: 'USD Coin' });
+        expect(printed()[0]).toBe(`Watching USD Coin (${USDC.toLowerCase()}) on chain 8453`);
     });
 
-    it('watch --chains passes explicit wallet chain membership', async () => {
+    it('--name overrides the detected name; no detected name means no label', async () => {
         const calls = mockApi({
-            'POST /api/mainnet/accounts': () => ({
-                status: 201,
+            'POST /api/mainnet/accounts/detect': () => ({ payload: { accountType: 'contract', detectedName: null, contractType: null } }),
+            'POST /api/mainnet/accounts': (c) => ({
+                status: 200,
+                payload: { created: false, account: { id: 'wc1', chainId: 1, chainIds: [1], address: '0xabc', accountType: 'contract', name: c.body.name ?? null } },
+            }),
+        });
+        await watchCommand(['0xAbC', '--name', 'Treasury']);
+        expect(calls[1].body).toEqual({ chainId: 1, address: '0xAbC', accountType: 'contract', name: 'Treasury' });
+        expect(printed()[0]).toBe('Updated Treasury (0xabc) on chain 1');
+
+        await watchCommand(['0xAbC']);
+        expect(calls[3].body).toEqual({ chainId: 1, address: '0xAbC', accountType: 'contract' });
+    });
+
+    it('refuses a wallet before any row is created', async () => {
+        const calls = mockApi({
+            'POST /api/mainnet/accounts/detect': () => ({ payload: { accountType: 'wallet', detectedName: 'vitalik.eth', contractType: null, activeChains: [1] } }),
+        });
+        await expect(watchCommand(['0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'])).rejects.toThrow(/it's a wallet/);
+        expect(calls).toHaveLength(1);
+    });
+
+    it('surfaces a detect failure (unsupported chain, RPC down) verbatim', async () => {
+        mockApi({ 'POST /api/mainnet/accounts/detect': () => ({ status: 400, payload: { error: 'Unsupported chainId' } }) });
+        await expect(watchCommand(['0xAbC', '--chain', '999999'])).rejects.toThrow('Unsupported chainId');
+    });
+
+    it('list asks for contracts only and prints chain, address, name', async () => {
+        const calls = mockApi({
+            'GET /api/mainnet/accounts': () => ({
                 payload: {
-                    created: true,
-                    account: { id: 'ww1', chainId: 1, chainIds: [1, 8453], address: '0xdef', accountType: 'wallet', name: null },
+                    accounts: [
+                        { id: 'a1', chainId: 1, chainIds: [1], address: '0xaaa', accountType: 'contract', name: 'USDC' },
+                        { id: 'a2', chainId: 8453, chainIds: [8453], address: '0xbbb', accountType: 'contract', name: null },
+                    ],
                 },
             }),
         });
-
-        await watchCommand(['0xDeF', '--chains', '1,8453']);
-        expect(calls[0].body).toEqual({ chainId: 1, address: '0xDeF', chainIds: [1, 8453] });
+        await watchCommand(['list', '--chain', '8453']);
+        expect(calls[0].path).toBe('/api/mainnet/accounts?accountType=contract&chainId=8453');
+        expect(printed()).toEqual(['1        0xaaa  USDC', '8453     0xbbb']);
     });
 
-    it('unwatch resolves the id from the list and archives it', async () => {
+    it('unwatch resolves the id from the list and deletes it', async () => {
         const accounts = [
             { id: 'a1', chainId: 1, chainIds: [1], address: '0xaaa', accountType: 'contract', name: 'Old' },
             { id: 'a2', chainId: 8453, chainIds: [8453], address: '0xaaa', accountType: 'contract', name: 'New' },
@@ -86,20 +80,29 @@ describe('watch / unwatch (mainnet watchlist)', () => {
         });
 
         await unwatchCommand(['0xAAA', '--chain', '8453']);
-        expect(calls.map((c) => `${c.method} ${c.url.slice(API_URL.length)}`)).toEqual([
-            'GET /api/mainnet/accounts',
+        expect(calls.map((c) => `${c.method} ${c.path}`)).toEqual([
+            'GET /api/mainnet/accounts?accountType=contract',
             'DELETE /api/mainnet/accounts/a2',
         ]);
+        expect(printed()[0]).toBe('Stopped watching New (0xaaa).');
     });
 
-    it('unwatch demands --chain when multiple entries match', async () => {
+    it('unwatch demands --chain when the contract is watched on several chains', async () => {
         const accounts = [
             { id: 'a1', chainId: 1, chainIds: [1], address: '0xaaa', accountType: 'contract', name: null },
             { id: 'a2', chainId: 8453, chainIds: [8453], address: '0xaaa', accountType: 'contract', name: null },
         ];
         mockApi({ 'GET /api/mainnet/accounts': () => ({ payload: { accounts } }) });
+        await expect(unwatchCommand(['0xAAA'])).rejects.toThrow(/watched on chains 1, 8453.*--chain/);
+    });
 
-        await expect(unwatchCommand(['0xAAA'])).rejects.toThrow(/--chain/);
+    it('a wallet entry never matches, even if the API returned one', async () => {
+        mockApi({
+            'GET /api/mainnet/accounts': () => ({
+                payload: { accounts: [{ id: 'w1', chainId: 1, chainIds: [1, 8453], address: '0xbbb', accountType: 'wallet', name: 'Deployer' }] },
+            }),
+        });
+        await expect(unwatchCommand(['0xBBB'])).rejects.toThrow(/No watched contract found for 0xBBB/);
     });
 
     it('fails with a login hint when no credential is available', async () => {
