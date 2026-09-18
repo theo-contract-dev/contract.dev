@@ -1,6 +1,6 @@
 {
   "name": "contract.dev",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "license": "MIT",
   "bin": {
     "contract.dev": "dist/cli/index.js"
